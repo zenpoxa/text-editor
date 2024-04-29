@@ -1,5 +1,4 @@
-use super::terminal::{Position, Size, Terminal};
-use std::io::Error;
+use super::terminal::{Size, Terminal};
 mod buffer;
 use buffer::Buffer;
 const NAME: &str = env!("CARGO_PKG_NAME");
@@ -16,20 +15,18 @@ impl View {
         self.size = to;
         self.needs_redraw = true;
     }
-    fn render_line(at: usize, line_text: &str) -> Result<(), Error> {
-        Terminal::move_caret_to(Position { row: at, col: 0 })?;
-        Terminal::clear_line()?;
-        Terminal::print(line_text)?;
-        Ok(())
+    fn render_line(at: usize, line_text: &str) {
+        let result = Terminal::print_row(at, line_text);
+        debug_assert!(result.is_ok(), "Failed to render line");
     }
 
-    pub fn render(&mut self) -> Result<(), Error> {
+    pub fn render(&mut self) {
         if !self.needs_redraw {
-            return Ok(());
+            return;
         }
         let Size { height, width } = self.size;
         if height == 0 || width == 0 {
-            return Ok(());
+            return;
         }
         // we allow this since we don't care if our welcome message is put _exactly_ in the middle.
         // it's allowed to be a bit too far up or down
@@ -43,15 +40,14 @@ impl View {
                 } else {
                     line
                 };
-                Self::render_line(current_row, truncated_line)?;
+                Self::render_line(current_row, truncated_line);
             } else if current_row == vertical_center && self.buffer.is_empty() {
-                Self::render_line(current_row, &Self::build_welcome_message(width))?;
+                Self::render_line(current_row, &Self::build_welcome_message(width));
             } else {
-                Self::render_line(current_row, "~")?;
+                Self::render_line(current_row, "~");
             }
         }
         self.needs_redraw = false;
-        Ok(())
     }
 
     fn build_welcome_message(width: usize) -> String {
