@@ -1,3 +1,5 @@
+#![warn(clippy::all, clippy::pedantic)]
+
 // Charger un module
 mod editor;
 
