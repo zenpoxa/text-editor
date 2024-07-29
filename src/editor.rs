@@ -18,7 +18,7 @@ impl Editor {
                 // Cas où key pressed
                 Ok(Key(event)) => {
                     // Afficher ce sur quoi on vient de cliquer
-                    println!("{:?} \r", event);
+                    println!("{event:?} \r");
 
                     // Condition d'arrêt
                     if let Char(c) = event.code {
