@@ -1,6 +1,6 @@
 // Saisie utilisateur
 use crossterm::event::{read, Event::Key, KeyCode::Char};
-use crossterm::terminal::{disable_raw_mode};
+use crossterm::terminal::disable_raw_mode;
 
 pub struct Editor {
 
