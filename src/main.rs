@@ -1,4 +1,4 @@
-#![warn(clippy::all, clippy::pedantic)]
+#![warn(clippy::all, clippy::pedantic, clippy::print_stdout)]
 
 // Charger un module
 mod editor;
@@ -7,7 +7,6 @@ mod editor;
 use editor::Editor;
 
 fn main() {
-
-    let editor = Editor::default();
-    editor.run();
+    print!("\x1b[2J");
+    Editor::default().run();
 }
