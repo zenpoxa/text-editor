@@ -5,6 +5,7 @@ use crossterm::style::Print;
 
 use std::io::{stdout, Error, Write};
 
+
 pub struct Terminal {}
 
 impl Terminal {
