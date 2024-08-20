@@ -35,7 +35,7 @@ impl Editor {
     fn handle_args(&mut self) {
         let args: Vec<String> = std::env::args().collect();
         if let Some(file_name) = args.get(1) {
-            self.view.load(file_name).unwrap();
+            self.view.load(file_name);
         }
     }
 

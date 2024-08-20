@@ -1,55 +1,61 @@
 use super::terminal::{Size, Terminal};
 use std::io::Error;
-const NAME: &str = env!("CARGO_PKG_NAME");
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 mod buffer;
 use buffer::Buffer;
+const NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Default)]
 pub struct View {
-    buffer : Buffer
+    buffer: Buffer,
 }
 
-
 impl View {
-    pub fn render(&self) -> Result<(), Error> {
+    pub fn render_welcome_screen() -> Result<(), Error> {
         let Size { height, .. } = Terminal::size()?;
-        for current_row in 0..height {
-            
-            Terminal::clear_line()?;
-            if let Some(line) = self.buffer.lines.get(current_row) {
-                Terminal::print(line)?;
-                Terminal::print("\r\n")?;
-                continue;
-            }
 
-            // Dessiner le titre + lignes vides
+        for current_row in 0..height {
+            Terminal::clear_line()?;
+            // we allow this since we don't care if our welcome message is put _exactly_ in the middle.
+            // it's allowed to be a bit up or down
             #[allow(clippy::integer_division)]
             if current_row == height / 3 {
                 Self::draw_welcome_message()?;
-            }
-            else {
+            } else {
                 Self::draw_empty_row()?;
             }
-
-            // Continuer ou non ?
             if current_row.saturating_add(1) < height {
                 Terminal::print("\r\n")?;
             }
         }
         Ok(())
     }
+    pub fn render_buffer(&self) -> Result<(), Error> {
+        let Size { height, .. } = Terminal::size()?;
 
-    pub fn load(&mut self, filename : &str) -> Result<(), Error> {
-        let file_contents = std::fs::read_to_string(filename).unwrap();
+        for current_row in 0..height {
+            Terminal::clear_line()?;
+            if let Some(line) = self.buffer.lines.get(current_row) {
+                Terminal::print(line)?;
+            } else {
+                Self::draw_empty_row()?;
+            }
 
-        for line in file_contents.lines() {
-            self.buffer.lines.push(line.to_string());
+            if current_row.saturating_add(1) < height {
+                Terminal::print("\r\n")?;
+            }
         }
 
         Ok(())
     }
-
+    pub fn render(&self) -> Result<(), Error> {
+        if self.buffer.is_empty() {
+            Self::render_welcome_screen()?;
+        } else {
+            self.render_buffer()?;
+        }
+        Ok(())
+    }
     fn draw_welcome_message() -> Result<(), Error> {
         let mut welcome_message = format!("{NAME} editor -- version {VERSION}");
         let width = Terminal::size()?.width;
@@ -68,5 +74,10 @@ impl View {
     fn draw_empty_row() -> Result<(), Error> {
         Terminal::print("~")?;
         Ok(())
+    }
+    pub fn load(&mut self, file_name: &str) {
+        if let Ok(buffer) = Buffer::load(file_name) {
+            self.buffer = buffer;
+        }
     }
 }
