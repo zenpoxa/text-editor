@@ -17,6 +17,6 @@ impl Buffer {
         for value in contents.lines() {
             lines.push(String::from(value));
         }
-        Ok(Self { lines })
+        Ok(Self{ lines })
     }
 }
