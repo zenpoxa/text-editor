@@ -1,3 +1,5 @@
+use std::usize;
+
 use super::{
     editorcommand::{Direction, EditorCommand},
     terminal::{Position, Size, Terminal}
@@ -96,10 +98,10 @@ impl View {
                 y = y.saturating_add(1);
             }
             Direction::Left => {
-                x = x.saturating_sub(1);
+                self.handle_left_arrow(&mut x, &mut y)
             }
             Direction::Right => {
-                x = x.saturating_add(1)  
+                self.handle_right_arrow(&mut x, &mut y)
             }
             Direction::PageUp => {
                 y = 0;
@@ -116,7 +118,36 @@ impl View {
         }
         self.location = Location {x, y};
         self.check_horizontal_validity();
+        self.check_vertical_validity();
         self.scroll_location_into_view();
+    }
+
+    fn handle_left_arrow(&mut self, x : &mut usize, y : &mut usize) {
+            if *x == 0 && *y > 0 {
+                *y = y.saturating_sub(1);
+                *x = self.size.width.saturating_sub(1);
+            }
+            else {
+                *x = x.saturating_sub(1);
+            }
+    }
+
+    fn handle_right_arrow(&mut self, x : &mut usize, y : &mut usize) {
+        if let Some(_) = self.buffer.lines.get(self.location.y) {
+            if *x == self.buffer.lines.get(*y).unwrap().len() {
+                *y = y.saturating_add(1);
+                *x = 0;
+            }
+            else {
+                *x = x.saturating_add(1);
+            }
+        }
+    }
+
+    fn check_vertical_validity(&mut self) {
+        if self.location.y > self.buffer.lines.len() {
+            self.location.y = self.buffer.lines.len()
+        }
     }
 
     fn check_horizontal_validity(&mut self) {
