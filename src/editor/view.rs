@@ -123,6 +123,8 @@ impl View {
 
         // mettre au bon endroit (vertical)
         y = min(y, self.buffer.lines.len());
+        // mettre au bon endroit (horizontal)
+        x = min(x, self.buffer.lines.get(y).map_or(0, Line::len));
 
         self.location = Location {x, y};
 
