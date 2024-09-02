@@ -1,3 +1,7 @@
+use std::cmp::min;
+
+use self::line::Line;
+
 use std::usize;
 
 use super::{
@@ -86,79 +90,44 @@ impl View {
     // FONCTION PRIVEES
     // ##############################
 
+    #[allow(clippy::arithmetic_side_effects)]
     fn move_text_location(&mut self, direction: &Direction) {
         let Location { mut x, mut y } = self.location;
-        let Size {height, width} = self.size;
+        let Size {height, ..} = self.size;
 
         match direction {
-            Direction::Up => {
-                y = y.saturating_sub(1);
-            },
-            Direction::Down => {
-                y = y.saturating_add(1);
-            }
+            Direction::Up => y = y.saturating_sub(1),
+            Direction::Down => y = y.saturating_add(1),
             Direction::Left => {
-                self.handle_left_arrow(&mut x, &mut y)
-            }
+                if x > 0 {
+                    x -= 1
+                } else if y > 0 {
+                    y -= 1;
+                    x = self.buffer.lines.get(y).map_or(0, Line::len);
+                }
+            },
             Direction::Right => {
-                self.handle_right_arrow(&mut x, &mut y)
-            }
-            Direction::PageUp => {
-                y = 0;
-            }
-            Direction::PageDown => {
-                y = height.saturating_sub(1);
-            }
-            Direction::Home => {
-                x = 0;
-            }
-            Direction::End => {
-                x = width.saturating_sub(1);
-            }
+                let width = self.buffer.lines.get(y).map_or(0, Line::len);
+                if x < width {
+                    x += 1
+                } else {
+                    y = y.saturating_add(1);
+                    x = 0
+                }
+            },
+            Direction::PageUp => y = y.saturating_sub(height).saturating_sub(1),
+            Direction::PageDown => y = y.saturating_add(height).saturating_sub(1),
+            Direction::Home => x = 0,
+            Direction::End => x = self.buffer.lines.get(y).map_or(0, Line::len),
         }
+
+        // mettre au bon endroit (vertical)
+        y = min(y, self.buffer.lines.len());
+
         self.location = Location {x, y};
-        self.check_horizontal_validity();
-        self.check_vertical_validity();
+
+
         self.scroll_location_into_view();
-    }
-
-    fn handle_left_arrow(&mut self, x : &mut usize, y : &mut usize) {
-            if *x == 0 && *y > 0 {
-                *y = y.saturating_sub(1);
-                *x = self.size.width.saturating_sub(1);
-            }
-            else {
-                *x = x.saturating_sub(1);
-            }
-    }
-
-    fn handle_right_arrow(&mut self, x : &mut usize, y : &mut usize) {
-        if let Some(_) = self.buffer.lines.get(self.location.y) {
-            if *x == self.buffer.lines.get(*y).unwrap().len() {
-                *y = y.saturating_add(1);
-                *x = 0;
-            }
-            else {
-                *x = x.saturating_add(1);
-            }
-        }
-    }
-
-    fn check_vertical_validity(&mut self) {
-        if self.location.y > self.buffer.lines.len() {
-            self.location.y = self.buffer.lines.len()
-        }
-    }
-
-    fn check_horizontal_validity(&mut self) {
-        if let Some(line) = self.buffer.lines.get(self.location.y) {
-            if self.location.x > line.len() {
-                self.location.x = line.len();
-            }
-        }
-        else {
-            self.location.x = 0;
-        }
     }
 
     fn resize(&mut self, to: Size) {
