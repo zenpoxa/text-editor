@@ -24,25 +24,6 @@ pub struct Location {
     pub line_index: usize,
 }
 
-// impl From<Location> for Position {
-//     fn from(loc: Location) -> Self {
-//         Self {
-//             col: loc.x,
-//             row: loc.y,
-//         }
-//     }
-// }
-
-// impl Location {
-
-//     pub const fn substract (&self, other: &Self) -> Self {
-//         Self {
-//             x: self.x.saturating_sub(other.x),
-//             y: self.y.saturating_sub(other.y),
-//         }
-//     }
-// }
-
 pub struct View {
     buffer: Buffer,
     needs_redraw: bool,
@@ -134,7 +115,6 @@ impl View {
 
 
     // region: Scrolling
-
     fn scroll_vertically(&mut self, to: usize) {
         let Size { height, .. } = self.size;
         let offset_changed = if to < self.scroll_offset.row {
