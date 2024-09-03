@@ -66,22 +66,16 @@ impl Editor {
         };
 
         if should_process {
-            match EditorCommand::try_from(event) {
-                Ok(command) => {
-                    // devoir quitter
-                    if matches!(command, EditorCommand::Quit) {
-                        self.should_quit = true;
-                    }
-                    // toute autre commande
-                    else {
-                        self.view.handle_command(command);
-                    }
-                },
-                Err(err) => {
-                    #[cfg(debug_assertions)]
-                    {
-                        panic!("Could not handle command: {err}");
-                    }
+
+            // Ici, seulement traiter les touches avec des commandes. Les touches sans commande associée (Err{}) ne feront rien
+            if let Ok(command) = EditorCommand::try_from(event) {
+                // devoir quitter
+                if matches!(command, EditorCommand::Quit) {
+                    self.should_quit = true;
+                }
+                // toute autre commande
+                else {
+                    self.view.handle_command(command);
                 }
             }
         }
