@@ -141,11 +141,28 @@ impl Line {
                 result.push(character)
             }
             result.push_str(&fragment.grapheme);
-            if grapheme_index >= self.fragments.len() {
-                result.push(character);
-            }
+        }
+        if grapheme_index >= self.fragments.len() {
+            result.push(character);
         }
 
+        self.fragments = Self::str_to_fragments(&result);
+    }
+
+    pub fn delete(&mut self, grapheme_index: usize) {
+        
+        // nothing to do if deleting empty space at the end of the line
+        if grapheme_index >= self.grapheme_count() {
+            return;
+        }
+        
+        // rewriting everythin but the deleted character
+        let mut result = String::new();
+        for (index, fragment) in self.fragments.iter().enumerate() {
+            if index != grapheme_index {
+                result.push_str(&fragment.grapheme);
+            }
+        }
         self.fragments = Self::str_to_fragments(&result);
     }
 }
