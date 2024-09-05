@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 
 use super::terminal::Size;
 
+#[derive(Clone, Copy)]
 pub enum Direction {
     PageUp,
     PageDown,
@@ -14,6 +15,7 @@ pub enum Direction {
     Down,
 }
 
+#[derive(Clone, Copy)]
 pub enum EditorCommand {
     Move(Direction),
     Resize(Size),
@@ -22,6 +24,7 @@ pub enum EditorCommand {
     Delete,
     Backspace,
     Enter,
+    Save,
 }
 
 // clippy::as_conversions: Will run into problems for rare edge case systems where usize < u16
@@ -36,12 +39,11 @@ impl TryFrom<Event> for EditorCommand {
                 code, modifiers, ..
             }) => match (code, modifiers) {
                 (KeyCode::Char('w'), KeyModifiers::CONTROL) => Ok(Self::Quit),
-
                 (KeyCode::Char(character), KeyModifiers::NONE | KeyModifiers::SHIFT) => {
                     Ok(Self::Insert(character))
                 }
                 (KeyCode::Tab, _) => Ok(Self::Insert('\t')),
-
+                (KeyCode::Char('s'), KeyModifiers::CONTROL) => Ok(Self::Save),
                 (KeyCode::Up, _) => Ok(Self::Move(Direction::Up)),
                 (KeyCode::Down, _) => Ok(Self::Move(Direction::Down)),
                 (KeyCode::Left, _) => Ok(Self::Move(Direction::Left)),

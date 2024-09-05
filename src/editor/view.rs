@@ -6,7 +6,8 @@ use std::usize;
 
 use super::{
     editorcommand::{Direction, EditorCommand},
-    terminal::{Position, Size, Terminal}
+    terminal::{Position, Size, Terminal},
+    DocumentStatus,
 };
 
 mod buffer;
@@ -34,35 +35,74 @@ pub struct View {
 
 impl View {
 
+    pub fn new(margin_bottom: usize) -> Self {
+        let terminal_size = Terminal::size().unwrap_or_default();
+        Self {
+            buffer: Buffer::default(),
+            needs_redraw: true,
+            size: Size {
+                width: terminal_size.width,
+                height: terminal_size.height.saturating_sub(margin_bottom),
+            },
+            text_location: Location::default(),
+            scroll_offset: Position::default(),
+        }
+    }
+
+    pub fn get_status(&self) -> DocumentStatus {
+        DocumentStatus {
+            total_lines: self.buffer.height(),
+            current_line_index: self.text_location.line_index,
+            file_name: self.buffer.file_name.clone(),
+            is_modified: self.buffer.dirty,
+        }
+    }
+
+    // region: Command handling
     pub fn handle_command (&mut self, command: EditorCommand) {
         match command {
             EditorCommand::Resize(size) => self.resize(size),
-            EditorCommand::Move(direction) => self.move_text_location(&direction),
+            EditorCommand::Move(direction) => self.move_text_location(direction),
             EditorCommand::Quit => {},
             EditorCommand::Insert(chararcter) => self.insert_char(chararcter),
             EditorCommand::Backspace => self.delete_backward(),
             EditorCommand::Delete => self.delete(),
             EditorCommand::Enter => self.insert_newline(),
+            EditorCommand::Save => self.save(),
         }
     }
+    fn resize(&mut self, to: Size) {
+        self.size = Size {
+            width: to.width,
+            height: to.height.saturating_sub(1).saturating_sub(2), // provisoire -> nécessite de connaître la hauteur de StatusBar en live
+        };
+        self.scroll_text_location_into_view();
+        self.needs_redraw = true;
+    }
+    // endregion
 
+    
+    // regions: handling file
     pub fn load(&mut self, file_name: &str) {
         if let Ok(buffer) = Buffer::load(file_name) {
             self.buffer = buffer;
             self.needs_redraw = true;
         }
     }
+    fn save(&mut self) {
+        let _ = self.buffer.save();
+    }
+    // endregion
 
     // region: Text editing
     fn insert_newline(&mut self) {
         self.buffer.insert_newline(self.text_location);
-        self.move_text_location(&Direction::Right);
+        self.move_text_location(Direction::Right);
         self.needs_redraw = true;
     }
-
     fn delete_backward(&mut self) {
         if self.text_location.line_index != 0 || self.text_location.grapheme_index != 0 {
-            self.move_text_location(&Direction::Left);
+            self.move_text_location(Direction::Left);
             self.delete();
         }
     }
@@ -90,17 +130,11 @@ impl View {
         let grapheme_delta = new_len.saturating_sub(old_len);
         if grapheme_delta > 0 {
             // si la nouvelle longueur est plus grande
-            self.move_text_location(&Direction::Right);
+            self.move_text_location(Direction::Right);
         }
         self.needs_redraw = true;
     }
     // endregion
-
-    fn resize(&mut self, to: Size) {
-        self.size = to;
-        self.scroll_text_location_into_view();
-        self.needs_redraw = true;
-    }
 
     // region: Rendering
     pub fn render(&mut self) {
@@ -118,7 +152,6 @@ impl View {
         let top = self.scroll_offset.row;
 
         for current_row in 0..height {
-            
             // afficher les lignes avec le décalage
             if let Some(line) = self.buffer.lines.get(current_row.saturating_add(top)) {
                 let left = self.scroll_offset.col;
@@ -215,7 +248,7 @@ impl View {
 
 
     // region: text location movement
-    fn move_text_location(&mut self, direction: &Direction) {
+    fn move_text_location(&mut self, direction: Direction) {
         let Size { height, .. } = self.size;
         // This match moves the positon, but does not check for all boundaries.
         // The final boundarline checking happens after the match statement.
@@ -297,16 +330,4 @@ impl View {
         self.text_location.line_index = min(self.text_location.line_index, self.buffer.height());
     }
     // endregion
-}
-
-impl Default for View {
-    fn default() -> Self {
-        Self {
-            buffer: Buffer::default(),
-            needs_redraw: true,
-            size: Terminal::size().unwrap_or_default(),
-            text_location: Location::default(),
-            scroll_offset: Position::default(),
-        }
-    }
 }
