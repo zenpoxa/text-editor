@@ -17,7 +17,7 @@ use terminal::Terminal;
 use view::View;
 use editorcommand::EditorCommand;
 use statusbar::StatusBar;
-use uicomponent::UiComponent;
+use uicomponent::UIComponent;
 
 use self::{messagebar::MessageBar, terminal::Size};
 const NAME: &str = env!("CARGO_PKG_NAME");
@@ -42,9 +42,9 @@ impl Editor {
         }));
         Terminal::initialize()?;
 
-        let mut editor = self::default();
-        let size = Terminal::size.unwrap_or_default();
-        editor.resize();
+        let mut editor = Self::default();
+        let size = Terminal::size().unwrap_or_default();
+        editor.resize(size);
 
         let args: Vec<String> = env::args().collect();
         if let Some(file_name) = args.get(1) {
@@ -126,12 +126,11 @@ impl Editor {
                 if matches!(command, EditorCommand::Quit) {
                     self.should_quit = true;
                 }
-                // toute autre commande
+                else if let EditorCommand::Resize(size) = command {
+                    self.resize(size);    
+                } 
                 else {
                     self.view.handle_command(command);
-                    if let EditorCommand::Resize(size) = command {
-                        self.status_bar.resize(size);
-                    }
                 }
             }
         }
@@ -145,9 +144,23 @@ impl Editor {
 
     }
     fn refresh_screen(&mut self) {
+        if self.terminal_size.height == 0 || self.terminal_size.width == 0 {
+            return;
+        }
+
         let _ = Terminal::hide_caret();
-        self.view.render();
-        self.status_bar.render();
+
+        // height at least 1 -> Render message bar
+        self.message_bar.render(self.terminal_size.height.saturating_sub(1));
+        // height at least 2 -> Render status bar
+        if self.terminal_size.height > 1 {
+            self.status_bar.render(self.terminal_size.height.saturating_sub(2));
+        }
+        // height at least 3 -> Render view also
+        if self.terminal_size.height > 2 {
+            self.view.render(0);
+        }
+
         let _ = Terminal::move_caret_to(self.view.caret_position());
         let _ = Terminal::show_caret();
         let _ = Terminal::execute();

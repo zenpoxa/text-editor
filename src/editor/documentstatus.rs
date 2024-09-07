@@ -9,7 +9,7 @@ pub struct DocumentStatus {
 impl DocumentStatus {
     pub fn modified_indicator_to_string(&self) -> String {
         if self.is_modified {
-            String::from("(modified)")
+            String::from("(Modifié)")
         } else {
             String::new()
         }
