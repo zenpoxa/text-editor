@@ -3,7 +3,7 @@ use std::{cmp::min, io::Error};
 use self::line::Line;
 
 use super::{
-    editorcommand::{Direction, EditorCommand},
+    command::{Edit, Move},
     terminal::{Position, Size, Terminal},
     uicomponent::UIComponent,
     DocumentStatus, NAME, VERSION,
@@ -40,46 +40,59 @@ impl View {
     }
 
     // region: Command handling
-    pub fn handle_command (&mut self, command: EditorCommand) {
+    pub fn handle_edit_command (&mut self, command: Edit) {
         match command {
-            EditorCommand::Resize(_) | EditorCommand::Quit => {}
-            EditorCommand::Move(direction) => self.move_text_location(direction),
-            EditorCommand::Insert(chararcter) => self.insert_char(chararcter),
-            EditorCommand::Backspace => self.delete_backward(),
-            EditorCommand::Delete => self.delete(),
-            EditorCommand::Enter => self.insert_newline(),
-            EditorCommand::Save => self.save(),
+            Edit::Insert(character) => self.insert_char(character),
+            Edit::Delete => self.delete(),
+            Edit::DeleteBackward => self.delete_backward(),
+            Edit::InsertNewline => self.insert_newline(),
         }
+    }
+    pub fn handle_move_command(&mut self, command: Move) {
+        let Size { height, .. } = self.size;
+
+        match command {
+            Move::Up => self.move_up(1),
+            Move::Down => self.move_down(1),
+            Move::Left => self.move_left(),
+            Move::Right => self.move_right(),
+            Move::PageUp => self.move_up(height.saturating_sub(1)),
+            Move::PageDown => self.move_down(height.saturating_sub(1)),
+            Move::StartOfLine => self.move_to_start_of_line(),
+            Move::EndOfLine => self.move_to_end_of_line(),
+        }
+
+        self.scroll_text_location_into_view()
     }
     // endregion
     
     // region: handling file
-    pub fn load(&mut self, file_name: &str) {
-        if let Ok(buffer) = Buffer::load(file_name) {
-            self.buffer = buffer;
-            self.mark_redraw(true);
-        }
+    pub fn load(&mut self, file_name: &str) -> Result<(), Error> {
+        let buffer = Buffer::load(file_name)?;
+        self.buffer = buffer;
+        self.set_needs_redraw(true);
+        Ok(())
     }
-    fn save(&mut self) {
-        let _ = self.buffer.save();
+    pub fn save(&mut self) -> Result<(), Error> {
+        self.buffer.save()
     }
     // endregion
 
     // region: Text editing
     fn insert_newline(&mut self) {
         self.buffer.insert_newline(self.text_location);
-        self.move_text_location(Direction::Right);
-        self.mark_redraw(true);
+        self.handle_move_command(Move::Right);
+        self.set_needs_redraw(true);
     }
     fn delete_backward(&mut self) {
         if self.text_location.line_index != 0 || self.text_location.grapheme_index != 0 {
-            self.move_text_location(Direction::Left);
+            self.handle_move_command(Move::Left);
             self.delete();
         }
     }
     fn delete(&mut self) {
         self.buffer.delete(self.text_location);
-        self.mark_redraw(true);
+        self.set_needs_redraw(true);
     }
     fn insert_char(&mut self, character: char) {
         let old_len = self
@@ -99,9 +112,9 @@ impl View {
         let grapheme_delta = new_len.saturating_sub(old_len);
         if grapheme_delta > 0 {
             // si la nouvelle longueur est plus grande
-            self.move_text_location(Direction::Right);
+            self.handle_move_command(Move::Right);
         }
-        self.mark_redraw(true);
+        self.set_needs_redraw(true);
     }
     // endregion
 
@@ -125,7 +138,6 @@ impl View {
     }
     // endregion
 
-
     // region: Scrolling
     fn scroll_vertically(&mut self, to: usize) {
         let Size { height, .. } = self.size;
@@ -139,7 +151,7 @@ impl View {
             false
         };
         if offset_changed {
-            self.mark_redraw(true);
+            self.set_needs_redraw(true);
         }
     }
     fn scroll_horizontally(&mut self, to: usize) {
@@ -154,7 +166,7 @@ impl View {
             false
         };
         if offset_changed {
-            self.mark_redraw(true);
+            self.set_needs_redraw(true);
         }
     }
     fn scroll_text_location_into_view(&mut self) {
@@ -163,7 +175,6 @@ impl View {
         self.scroll_horizontally(col);
     }
     // endregion
-
 
     // region: Location et Position
     pub fn caret_position(&self) -> Position {
@@ -178,24 +189,7 @@ impl View {
     }
     // endregion
 
-
     // region: text location movement
-    fn move_text_location(&mut self, direction: Direction) {
-        let Size { height, .. } = self.size;
-        // This match moves the positon, but does not check for all boundaries.
-        // The final boundarline checking happens after the match statement.
-        match direction {
-            Direction::Up => self.move_up(1),
-            Direction::Down => self.move_down(1),
-            Direction::Left => self.move_left(),
-            Direction::Right => self.move_right(),
-            Direction::PageUp => self.move_up(height.saturating_sub(1)),
-            Direction::PageDown => self.move_down(height.saturating_sub(1)),
-            Direction::Home => self.move_to_start_of_line(),
-            Direction::End => self.move_to_end_of_line(),
-        }
-        self.scroll_text_location_into_view();
-    }
     fn move_up(&mut self, step: usize) {
         self.text_location.line_index = self.text_location.line_index.saturating_sub(step);
         self.snap_to_valid_grapheme();
@@ -265,7 +259,7 @@ impl View {
 }
 
 impl UIComponent for View {
-    fn mark_redraw(&mut self, value: bool) {
+    fn set_needs_redraw(&mut self, value: bool) {
         self.needs_redraw = value;
     }
     fn needs_redraw(&self) -> bool {

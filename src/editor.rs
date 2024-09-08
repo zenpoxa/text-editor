@@ -1,13 +1,11 @@
 use crossterm::event::{read, Event, KeyEvent, KeyEventKind};
 use std::{
-    env,
-    io::Error,
-    panic::{set_hook, take_hook},
+    env, io::Error, panic::{set_hook, take_hook}
 };
+mod command;
 mod messagebar;
 mod uicomponent;
 mod documentstatus;
-mod editorcommand;
 mod terminal;
 mod view;
 mod fileinfo;
@@ -15,13 +13,21 @@ mod statusbar;
 use documentstatus::DocumentStatus;
 use terminal::Terminal;
 use view::View;
-use editorcommand::EditorCommand;
 use statusbar::StatusBar;
 use uicomponent::UIComponent;
 
-use self::{messagebar::MessageBar, terminal::Size};
+use self:: {
+    command::{
+        Command::{self, Edit, Move, System},
+        System::{Quit, Resize, Save}
+    },
+    messagebar::MessageBar,
+    terminal::Size,
+};
+
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const QUIT_TIMES: u8 = 3;
 
 #[derive(Default)]
 pub struct Editor {
@@ -31,6 +37,7 @@ pub struct Editor {
     title: String,
     message_bar: MessageBar,
     terminal_size: Size,
+    quit_times: u8,
 }
 
 impl Editor {
@@ -45,15 +52,18 @@ impl Editor {
         let mut editor = Self::default();
         let size = Terminal::size().unwrap_or_default();
         editor.resize(size);
+        editor
+            .message_bar
+            .update_message("HELP: Ctrl-S = save | Ctrl-Q = quit");
 
         let args: Vec<String> = env::args().collect();
         if let Some(file_name) = args.get(1) {
-            editor.view.load(file_name);
+            if editor.view.load(file_name).is_err() {
+                editor
+                    .message_bar
+                    .update_message(&format!("ERR: Could not open file: {file_name}"));
+            }
         }
-
-        editor
-            .message_bar
-            .update_message("HELP: Ctrl-S = save | Ctrl-Q = quit".to_string());
 
         editor.refresh_status();
 
@@ -106,12 +116,7 @@ impl Editor {
         }
     }
 
-    // needless_pass_by_value: Event is not huge, so there is not a
-    // performance overhead in passing by value, and pattern matching in this
-    // function would be needlessly complicated if we pass by reference here.
-    #[allow(clippy::needless_pass_by_value)]
     fn evaluate_event(&mut self, event: Event) {
-        
         let should_process = match &event {
             Event::Key(KeyEvent {kind, ..}) => kind == &KeyEventKind::Press,
             Event::Resize(_, _) => true,
@@ -119,29 +124,64 @@ impl Editor {
         };
 
         if should_process {
-
             // Ici, seulement traiter les touches avec des commandes. Les touches sans commande associée (Err{}) ne feront rien
-            if let Ok(command) = EditorCommand::try_from(event) {
-                // devoir quitter
-                if matches!(command, EditorCommand::Quit) {
-                    self.should_quit = true;
-                }
-                else if let EditorCommand::Resize(size) = command {
-                    self.resize(size);    
-                } 
-                else {
-                    self.view.handle_command(command);
-                }
+            if let Ok(command) = Command::try_from(event) {
+                self.process_command(command);
             }
         }
-        // A EVITER POUR WINDOWS (car l'événement 'Release' n'est pas pris en compte)
+
+        // PANIC A EVITER POUR WINDOWS (car l'événement 'Release' n'est pas pris en compte)
         else if !(cfg!(windows)) {
             #[cfg(debug_assertions)]
             {
                 panic!("Received and discarded unsupported or non-press event.");
             }
         }
+    }
 
+    fn process_command(&mut self, command: Command) {
+        // Handle quit times to reset or continue
+        match command {
+            System(Quit) => self.handle_quit(),
+            System(Resize(size)) => self.resize(size),
+            _ => self.reset_quit_times(),
+        }
+        // Other commands
+        match command {
+            System(Quit | Resize(_)) => {}
+            System(Save) => self.handle_save(),
+            Edit(edit_command) => self.view.handle_edit_command(edit_command),
+            Move(move_command) => self.view.handle_move_command(move_command),            
+        }
+    }
+
+    fn handle_save(&mut self) {
+        if self.view.save().is_ok() {
+            self.message_bar.update_message("Fichier sauvegardé correctement");
+        }
+        else {
+            self.message_bar.update_message("Impossible de sauvegarder dans ce fichier");
+        }
+    }
+    #[allow(clippy::arithmetic_side_effects)]
+    fn handle_quit(&mut self) {
+        self.quit_times += 1;
+        if !self.view.get_status().is_modified || self.quit_times == QUIT_TIMES {
+            self.should_quit = true;
+        }
+        else {
+            self.message_bar.update_message(&format!(
+                "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
+                QUIT_TIMES - self.quit_times
+            ));
+
+        }
+    }
+    fn reset_quit_times(&mut self) {
+        if self.quit_times > 0 {
+            self.quit_times = 0;
+            self.message_bar.update_message("");
+        }
     }
     fn refresh_screen(&mut self) {
         if self.terminal_size.height == 0 || self.terminal_size.width == 0 {
