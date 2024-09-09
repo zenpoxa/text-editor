@@ -254,7 +254,7 @@ impl Editor {
         if self.view.is_file_loaded() {
             self.save(None);
         } else {
-            self.set_prompt(PromptType::None);
+            self.set_prompt(PromptType::Save);
         }
     }
     fn process_command_during_save(&mut self, command: Command) {
