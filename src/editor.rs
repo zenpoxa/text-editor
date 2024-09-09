@@ -291,8 +291,19 @@ impl Editor {
     fn process_command_during_search(&mut self, command: Command) {
         match command {
             System(Quit | Resize(_) | Search | Save) | Move(_) => {} // Not applicable during save, Resize already handled at this stage
-            System(Dismiss) | Edit(InsertNewline) => self.set_prompt(PromptType::None),
-            Edit(edit_command) => self.command_bar.handle_edit_command(edit_command),
+            System(Dismiss) => {
+                self.set_prompt(PromptType::None);
+                self.view.dismiss_search();
+            }
+            Edit(InsertNewline) => {
+                self.set_prompt(PromptType::None);
+                self.view.exit_search();
+            }
+            Edit(edit_command) => {
+                self.command_bar.handle_edit_command(edit_command);
+                let query = self.command_bar.value();
+                self.view.search(&query);
+            }
         }
     }
     // endregion
@@ -311,7 +322,10 @@ impl Editor {
         match prompt_type {
             PromptType::None => self.message_bar.set_needs_redraw(true), // Prompt closed, needs to redraw
             PromptType::Save => self.command_bar.set_prompt("Enregistrer sous : "),
-            PromptType::Search => self.command_bar.set_prompt("Rechercher : "),
+            PromptType::Search => {
+                self.view.enter_search();
+                self.command_bar.set_prompt("Rechercher (Esc pour annuler) : ");
+            }
         }
         self.command_bar.clear_value();
         self.prompt_type = prompt_type;
