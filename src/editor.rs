@@ -77,7 +77,7 @@ impl Editor {
         let size = Terminal::size().unwrap_or_default();
         
         editor.handle_resize_command(size);
-        editor.update_message("HELP: Ctrl-F = Search | Ctrl-S = save | Ctrl-Q = quit")
+        editor.update_message("HELP: Ctrl-F = Search | Ctrl-S = save | Ctrl-Q = quit");
 
         let args: Vec<String> = env::args().collect();
         if let Some(file_name) = args.get(1) {
@@ -135,7 +135,7 @@ impl Editor {
         let new_caret_pos = if self.in_prompt() {
             Position {
                 row: bottom_bar_row,
-                col: command_bar.caret_position_col(),
+                col: self.command_bar.caret_position_col(),
             }
         } else {
             self.view.caret_position()
@@ -189,54 +189,9 @@ impl Editor {
             PromptType::Save => self.process_command_during_save(command),
             PromptType::None => self.process_command_no_prompt(command),
         }
-
-        // Handle quit times to reset or continue
-        // match command {
-        //     System(Quit) => {
-        //         if self.command_bar.is_none() {
-        //             self.handle_quit();
-        //         }   
-        //     }
-        //     System(Resize(size)) => self.resize(size),
-        //     _ => self.reset_quit_times(),
-        // }
-        // // Other commands
-        // match command {
-        //     System(Quit | Resize(_)) => {}
-        //     System(Save) => {
-        //         if self.command_bar.is_none() {
-        //             self.handle_save();
-        //         }
-        //     }
-        //     System(Dismiss) => {
-        //         if self.command_bar.is_some() {
-        //             self.dismiss_prompt();
-        //             self.message_bar.update_message("Save aborted.");
-        //         }
-        //     }
-        //     Edit(edit_command) => {
-        //         if let Some(command_bar) = &mut self.command_bar {
-        //             if matches!(edit_command, InsertNewline) {
-        //                 let file_name = command_bar.value();
-        //                 self.dismiss_prompt();
-        //                 self.save(Some(&file_name));
-        //                 // MANQUE 'FICHIER SAUVEGARDE' ??
-        //             } else {
-        //                 command_bar.handle_edit_command(edit_command);
-        //             }
-        //         } else {
-        //             self.view.handle_edit_command(edit_command);
-        //         }
-        //     }
-        //     Move(move_command) => {
-        //         if self.command_bar.is_none() {
-        //             self.view.handle_move_command(move_command);
-        //         }
-        //     }
-        // }
     }
 
-    fn process_command_no_prompt(&mut self) {
+    fn process_command_no_prompt(&mut self, command: Command) {
         if matches!(command, System(Quit)) {
             self.handle_quit_command();
             return;
@@ -247,9 +202,9 @@ impl Editor {
         match command {
             System(Quit | Resize(_) | Dismiss) => {}
             System(Search) => self.set_prompt(PromptType::Search),
-            System(Save) => self.handle_save_command();
-            Edit(edit_command) => self.view.handle_edit_command(edit_command);
-            Move(move_command) => self.view.handle_move_command(move_command);
+            System(Save) => self.handle_save_command(),
+            Edit(edit_command) => self.view.handle_edit_command(edit_command),
+            Move(move_command) => self.view.handle_move_command(move_command),
         }
 
     }
@@ -318,11 +273,11 @@ impl Editor {
         }
     }
     fn save(&mut self, file_name: Option<&str>) {
-        let result = if let Some(name) = self.file_name {
+        let result = if let Some(name) = file_name {
             self.view.save_as(name)
         } else {
             self.view.save()
-        }
+        };
     
         if result.is_ok() {
             self.update_message("Fichier sauvegardé correctement.");
@@ -344,9 +299,9 @@ impl Editor {
 
     // region: message & command bar
     fn update_message(&mut self, new_message: &str) {
-        self.view.update_message(new_message);
+        self.message_bar.update_message(new_message);
     }
-    // endregion
+    // endregion    
 
     // region: prompt handling
     fn in_prompt(&self) -> bool {
@@ -354,9 +309,9 @@ impl Editor {
     }
     fn set_prompt(&mut self, prompt_type: PromptType) {
         match prompt_type {
-            PromptType::None => self.message_bar.set_needs_redraw(true); // Prompt closed, needs to redraw
-            PromptType::Save => self.command_bar.set_prompt("Enregistrer sous : ");
-            PromptType::Search => self.command_bar.set_prompt("Rechercher : ");
+            PromptType::None => self.message_bar.set_needs_redraw(true), // Prompt closed, needs to redraw
+            PromptType::Save => self.command_bar.set_prompt("Enregistrer sous : "),
+            PromptType::Search => self.command_bar.set_prompt("Rechercher : "),
         }
         self.command_bar.clear_value();
         self.prompt_type = prompt_type;
