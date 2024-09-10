@@ -18,7 +18,7 @@ use commandbar::CommandBar;
 use documentstatus::DocumentStatus;
 use line::Line;
 use messagebar::MessageBar;
-use position::Position;
+use position::{Col, Position, Row};
 use size::Size;
 use terminal::Terminal;
 use view::View;
@@ -28,6 +28,7 @@ use uicomponent::UIComponent;
 use self::command::{
     Command::{self, Edit, Move, System},
     Edit::InsertNewline,
+    Move::{Down, Right},
     System::{Dismiss, Quit, Resize, Save, Search},
 };
 
@@ -290,7 +291,6 @@ impl Editor {
     // region search command & prompt handling
     fn process_command_during_search(&mut self, command: Command) {
         match command {
-            System(Quit | Resize(_) | Search | Save) | Move(_) => {} // Not applicable during save, Resize already handled at this stage
             System(Dismiss) => {
                 self.set_prompt(PromptType::None);
                 self.view.dismiss_search();
@@ -304,6 +304,8 @@ impl Editor {
                 let query = self.command_bar.value();
                 self.view.search(&query);
             }
+            Move(Right | Down) => self.view.search_next();
+            System(Quit | Resize(_) | Search | Save) | Move(_) => {} // Not applicable during save, Resize already handled at this stage
         }
     }
     // endregion
@@ -324,7 +326,7 @@ impl Editor {
             PromptType::Save => self.command_bar.set_prompt("Enregistrer sous : "),
             PromptType::Search => {
                 self.view.enter_search();
-                self.command_bar.set_prompt("Rechercher (Esc pour annuler) : ");
+                self.command_bar.set_prompt("Rechercher (Esc pour annuler, flèches pour naviguer) : ");
             }
         }
         self.command_bar.clear_value();
