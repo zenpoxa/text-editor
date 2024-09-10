@@ -122,7 +122,7 @@ impl Editor {
         if self.in_prompt() {
             self.command_bar.render(bottom_bar_row);
         } else {
-            self.message_bar.render(bottom_bar_row)
+            self.message_bar.render(bottom_bar_row);
         }
 
         if self.terminal_size.height > 1 {
@@ -170,12 +170,12 @@ impl Editor {
         }
 
         // PANIC A EVITER POUR WINDOWS (car l'événement 'Release' n'est pas pris en compte)
-        else if !(cfg!(windows)) {
-            #[cfg(debug_assertions)]
-            {
-                panic!("Received and discarded unsupported or non-press event.");
-            }
-        }
+        // else if !(cfg!(windows)) {
+        //     #[cfg(debug_assertions)]
+        //     {
+        //         panic!("Received and discarded unsupported or non-press event.");
+        //     }
+        // }
     }
     // endregion
 
@@ -304,7 +304,7 @@ impl Editor {
                 let query = self.command_bar.value();
                 self.view.search(&query);
             }
-            Move(Right | Down) => self.view.search_next();
+            Move(Right | Down) => self.view.search_next(),
             System(Quit | Resize(_) | Search | Save) | Move(_) => {} // Not applicable during save, Resize already handled at this stage
         }
     }

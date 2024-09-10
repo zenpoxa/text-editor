@@ -21,7 +21,7 @@ pub trait UIComponent {
                 Ok(()) => self.set_needs_redraw(false),
                 Err(err) => {
                     #[cfg(debug_assertions)]
-                    panic!("Could not render component : {:?}", err);
+                    panic!("Could not render component : {err:?}");
                 }
             }
         }
