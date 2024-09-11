@@ -115,9 +115,9 @@ impl Editor {
         if self.terminal_size.height == 0 || self.terminal_size.width == 0 {
             return;
         }
+
         let bottom_bar_row = self.terminal_size.height.saturating_sub(1);
         let _ = Terminal::hide_caret();
-        
         
         if self.in_prompt() {
             self.command_bar.render(bottom_bar_row);
@@ -168,14 +168,12 @@ impl Editor {
                 self.process_command(command);
             }
         }
-
+        
         // PANIC A EVITER POUR WINDOWS (car l'événement 'Release' n'est pas pris en compte)
-        // else if !(cfg!(windows)) {
-        //     #[cfg(debug_assertions)]
-        //     {
-        //         panic!("Received and discarded unsupported or non-press event.");
-        //     }
-        // }
+        else {
+            let is_windows = env::consts::OS == "windows";
+            debug_assert!(is_windows, "Received and discarded unsupported or non-press event.");
+        }
     }
     // endregion
 
@@ -326,7 +324,7 @@ impl Editor {
             PromptType::Save => self.command_bar.set_prompt("Enregistrer sous : "),
             PromptType::Search => {
                 self.view.enter_search();
-                self.command_bar.set_prompt("Rechercher (Esc pour annuler, flèches pour naviguer) : ");
+                self.command_bar.set_prompt("Rechercher (Esc pour annuler, fleches pour naviguer) : ");
             }
         }
         self.command_bar.clear_value();

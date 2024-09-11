@@ -25,6 +25,7 @@ impl CommandBar {
             .len()
             .saturating_add(self.value.grapheme_count());
         min(max_width, self.size.width)
+
     }
     pub fn value(&self) -> String {
         self.value.to_string()
