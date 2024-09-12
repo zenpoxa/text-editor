@@ -2,27 +2,23 @@ use crossterm::event::{read, Event, KeyEvent, KeyEventKind};
 use std::{
     env, io::Error, panic::{set_hook, take_hook}
 };
+
+mod annotatedstring;
 mod command;
-mod commandbar;
-mod messagebar;
-mod uicomponent;
+mod uicomponents;
 mod documentstatus;
 mod terminal;
-mod view;
 mod line;
 mod position;
 mod size;
-mod statusbar;
 
-use commandbar::CommandBar;
+use annotatedstring::{AnnotatedString, AnnotationType};
+use uicomponents::{CommandBar,MessageBar,View, StatusBar, UIComponent};
 use documentstatus::DocumentStatus;
 use line::Line;
-use messagebar::MessageBar;
 use position::{Col, Position, Row};
 use size::Size;
 use terminal::Terminal;
-use view::View;
-use statusbar::StatusBar;
 use uicomponent::UIComponent;
 
 use self::command::{

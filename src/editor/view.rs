@@ -1,4 +1,3 @@
-use std::{cmp::min, io::Error};
 
 use super::{
     command::{Edit, Move},
