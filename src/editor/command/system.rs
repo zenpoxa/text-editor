@@ -20,9 +20,9 @@ impl TryFrom<KeyEvent> for System {
 
         if modifiers == KeyModifiers::CONTROL {
             match code {
-                Char('q') => Ok(Self::Quit),
+                Char('w') => Ok(Self::Quit),
                 Char('s') => Ok(Self::Save),
-                Char('f') => Ok(Self::Search),
+                Char('t') => Ok(Self::Search),
                 _ => Err(format!("Unsupported CONTROL+{code:?} combination")),
             }
         } else if modifiers == KeyModifiers::NONE && matches!(code, KeyCode::Esc) {

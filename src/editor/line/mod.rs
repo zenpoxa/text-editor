@@ -112,8 +112,8 @@ impl Line {
 
         if let Some(query) = query {
             if !query.is_empty() {
-                self.find_all(query, 0..self.string.len()).iter.for_each(
-                    |start_byte_idx, grapheme_idx| {
+                self.find_all(query, 0..self.string.len()).iter().for_each(
+                    |(start_byte_idx, grapheme_idx)| {
                         if let Some(selected_match) = selected_match {
                             if *grapheme_idx == selected_match {
                                 result.add_annotation(

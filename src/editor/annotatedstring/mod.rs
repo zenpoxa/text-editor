@@ -75,7 +75,7 @@ impl AnnotatedString {
                 }
             } else {
                 annotation.start_byte_idx
-            }
+            };
 
             annotation.end_byte_idx = if annotation.end_byte_idx >= end_byte_idx {
                 // For annotations ending after the replaced range, we move the end index by the difference in length.

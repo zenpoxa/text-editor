@@ -19,7 +19,6 @@ use line::Line;
 use position::{Col, Position, Row};
 use size::Size;
 use terminal::Terminal;
-use uicomponent::UIComponent;
 
 use self::command::{
     Command::{self, Edit, Move, System},
